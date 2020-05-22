@@ -1,0 +1,29 @@
+--- libqnio-19255696d892a6d50dd39e803e791feedfdd6a07/src/Makefile.orig	2017-04-20 02:26:17.000000000 +0200
++++ libqnio-19255696d892a6d50dd39e803e791feedfdd6a07/src/Makefile	2020-05-22 09:51:01.857777388 +0200
+@@ -8,7 +8,8 @@
+ CPPFLAGS     = -Iinclude
+ CFLAGS       = -fPIC -fno-strict-aliasing -Wall -Werror -g -pthread
+ DEPFLAGS     = -MMD -MP -MT $@ -MF $(@D)/$(*F).d
+-LDFLAGS      = -shared
++LDFLAGS      = 
++SLDFLAGS     = $(LDFLAGS) -shared
+ DEBUGFLAGS   = -O0 -D_DEBUG -D_REENTRANT
+ RELEASEFLAGS = -03 -D_REENTRANT
+ HEADERS      = /usr/include/qnio
+@@ -44,13 +45,13 @@
+ 	$(CC) $(CFLAGS) $(CPPFLAGS) $(DEV2) $(DEPFLAGS) $(OPTFLAGS) -c -o $@ $<
+ 
+ $(BASE_TARGET): $(BASE_OBJECTS)
+-	$(CC) $(FLAGS) $(CFLAGS) $(LDFLAGS) -o $(BASE_TARGET) $(BASE_OBJECTS)
++	$(CC) $(FLAGS) $(CFLAGS) $(SLDFLAGS) -o $(BASE_TARGET) $(BASE_OBJECTS) -lssl -lcrypto
+ 
+ $(TEST_TARGET): $(TEST_OBJECTS) $(BASE_TARGET)
+-	$(CC) $(FLAGS) $(CFLAGS) -o $(TEST_TARGET) $(TEST_OBJECTS) -L. -lvxhs -lssl -lcrypto
++	$(CC) $(FLAGS) $(CFLAGS) $(LDFLAGS) -o $(TEST_TARGET) $(TEST_OBJECTS) -L. -lvxhs -lssl -lcrypto
+ 
+ $(TEST_CLIENT_TARGET): $(TEST_CLIENT_OBJECTS) $(BASE_TARGET)
+-	$(CC) $(FLAGS) $(CFLAGS) -o $(TEST_CLIENT_TARGET) $(TEST_CLIENT_OBJECTS) -L. -lvxhs -lssl -lcrypto -lrt
++	$(CC) $(FLAGS) $(CFLAGS) $(LDFLAGS) -o $(TEST_CLIENT_TARGET) $(TEST_CLIENT_OBJECTS) -L. -lvxhs -lssl -lcrypto -lrt
+ 
+ clean:
+ 	\rm -f $(BASE_TARGET)

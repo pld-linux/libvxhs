@@ -1,0 +1,120 @@
+--- libqnio-19255696d892a6d50dd39e803e791feedfdd6a07/src/lib/qnio/nio_client.c.orig	2017-04-20 02:26:17.000000000 +0200
++++ libqnio-19255696d892a6d50dd39e803e791feedfdd6a07/src/lib/qnio/nio_client.c	2020-05-22 08:50:31.620777403 +0200
+@@ -537,7 +537,7 @@
+ send_on_connection(struct qnio_msg *msg, struct conn *c)
+ {
+     msg->ctx = c;
+-    msg->hinfo.cookie = (uint64_t) msg;
+-    msg->hinfo.crc = (unsigned char)((uint64_t) msg % CRC_MODULO);
++    msg->hinfo.cookie = (uint64_t)(uintptr_t) msg;
++    msg->hinfo.crc = (unsigned char)((uintptr_t) msg % CRC_MODULO);
+     nioDbg("Msg is born on client side msgid=%ld %p",msg->hinfo.cookie, msg);
+     if (ck_pr_load_int(&c->flags) & CONN_FLAG_DISCONNECTED) {
+--- libqnio-19255696d892a6d50dd39e803e791feedfdd6a07/src/lib/qnio/nio_core.c.orig	2017-04-20 02:26:17.000000000 +0200
++++ libqnio-19255696d892a6d50dd39e803e791feedfdd6a07/src/lib/qnio/nio_core.c	2020-05-22 09:05:07.942696626 +0200
+@@ -91,7 +91,7 @@
+     struct iovec resp;
+ 
+     rinfo = &conn->rinfo;
+-    msg = (struct qnio_msg *)rinfo->hinfo.cookie;
++    msg = (struct qnio_msg *)(uintptr_t)rinfo->hinfo.cookie;
+     nioDbg("Msg is recvd from wire on client side msgid=%ld", msg->hinfo.cookie);
+     LIST_DEL(&msg->lnode);
+     nioDbg("Msg removed from pending list msgid=%ld", msg->hinfo.cookie);
+@@ -149,13 +149,13 @@
+         return err;
+     }
+     if (conn->ctx->mode == QNIO_CLIENT_MODE) {
+-        msg = (struct qnio_msg *)hinfo->cookie;
++        msg = (struct qnio_msg *)(uintptr_t)hinfo->cookie;
+         if (msg->recv != NULL) {
+             rinfo->buf_source = BUF_SRC_USER;
+         } else {
+             nioDbg("Client side message, assigning default buffer");
+             aligned_size = ((hinfo->payload_size / BUF_ALIGN) + 1) * BUF_ALIGN;
+-            posix_memalign((void **)&rinfo->buf, BUF_ALIGN, aligned_size);
++            if (posix_memalign((void **)&rinfo->buf, BUF_ALIGN, aligned_size)) rinfo->buf = NULL; // FIXME: real error handling
+             rinfo->buf_source = BUF_SRC_MALLOC;
+         }
+     } else if (conn->ctx->mode == QNIO_SERVER_MODE) {
+@@ -166,7 +166,7 @@
+         } else {
+             nioDbg("Server side message, assigning default buffer");
+             aligned_size = ((hinfo->payload_size / BUF_ALIGN) + 1) * BUF_ALIGN;
+-            posix_memalign((void **)&rinfo->buf, BUF_ALIGN, aligned_size);
++            if (posix_memalign((void **)&rinfo->buf, BUF_ALIGN, aligned_size)) rinfo->buf = NULL; // FIXME: real error handling
+             rinfo->buf_source = BUF_SRC_MALLOC;
+         }
+     } else {
+--- libqnio-19255696d892a6d50dd39e803e791feedfdd6a07/src/test/server.c.orig	2017-04-20 02:26:17.000000000 +0200
++++ libqnio-19255696d892a6d50dd39e803e791feedfdd6a07/src/test/server.c	2020-05-22 09:06:50.795472758 +0200
+@@ -8,6 +8,7 @@
+  * GNU GPL, version 2 or (at your option) any later version.
+  */
+ 
++#include <inttypes.h>
+ #include <pthread.h>
+ #include <libgen.h>
+ #include "defs.h"
+@@ -64,7 +65,7 @@
+     fclose(backing_file);
+ 
+     if (verbose) {
+-        printf("read %ld bytes\n", n);
++        printf("read %zd bytes\n", n);
+     }
+ 
+     returnd->iov_len = size;
+@@ -117,7 +118,7 @@
+     fclose(backing_file);
+ 
+     if (verbose) {
+-        printf("wrote %ld bytes\n", n);
++        printf("wrote %zd bytes\n", n);
+     }
+ 
+     msg->hinfo.err = 0;
+@@ -146,7 +147,7 @@
+     int fd;
+ 
+     if (verbose) {
+-        printf("In server callback for msg #%ld\n", msg->hinfo.cookie);
++        printf("In server callback for msg #%"PRIu64"\n", msg->hinfo.cookie);
+     }
+ 
+     switch (opcode) {
+--- libqnio-19255696d892a6d50dd39e803e791feedfdd6a07/src/lib/qnio/slab.c.orig	2017-04-20 02:26:17.000000000 +0200
++++ libqnio-19255696d892a6d50dd39e803e791feedfdd6a07/src/lib/qnio/slab.c	2020-05-22 09:29:40.824717340 +0200
+@@ -31,7 +31,9 @@
+         if(fptr != NULL)
+             entry = fptr(NULL);
+         else if(alignment != 0)
+-            posix_memalign(&entry, alignment, alloc_size);
++	{
++            if(posix_memalign(&entry, alignment, alloc_size)) entry = NULL; // FIXME: real error handling
++	}
+         else
+             entry = malloc(alloc_size);
+         node = (fifo_node_t *) malloc(sizeof(fifo_node_t));
+@@ -67,7 +69,9 @@
+         if(slab->init_fptr != NULL)
+             entry = slab->init_fptr(NULL);
+         else if(slab->alignment != 0)
+-            posix_memalign(&entry, slab->alignment, slab->alloc_size);
++	{
++            if(posix_memalign(&entry, slab->alignment, slab->alloc_size)) entry = NULL; // FIXME: real error handling
++	}
+         else
+             entry = malloc(slab->alloc_size);
+         node = (fifo_node_t *) malloc(sizeof(fifo_node_t));
+@@ -101,7 +105,9 @@
+     else
+     {
+         if(slab->alignment != 0)
+-            posix_memalign(&entry, slab->alignment, slab->alloc_size);
++	{
++            if(posix_memalign(&entry, slab->alignment, slab->alloc_size)) entry = NULL; // FIXME: real error handling
++	}
+         else
+             entry = malloc(slab->alloc_size);
+         node = (fifo_node_t *) malloc(sizeof(fifo_node_t));
