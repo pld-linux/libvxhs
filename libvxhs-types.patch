@@ -1,6 +1,7 @@
---- libqnio-19255696d892a6d50dd39e803e791feedfdd6a07/src/lib/qnio/nio_client.c.orig	2017-04-20 02:26:17.000000000 +0200
-+++ libqnio-19255696d892a6d50dd39e803e791feedfdd6a07/src/lib/qnio/nio_client.c	2020-05-22 08:50:31.620777403 +0200
-@@ -537,7 +537,7 @@
+diff -urNp -x '*.orig' libqnio-19255696d892a6d50dd39e803e791feedfdd6a07.org/src/lib/qnio/nio_client.c libqnio-19255696d892a6d50dd39e803e791feedfdd6a07/src/lib/qnio/nio_client.c
+--- libqnio-19255696d892a6d50dd39e803e791feedfdd6a07.org/src/lib/qnio/nio_client.c	2017-04-20 02:26:17.000000000 +0200
++++ libqnio-19255696d892a6d50dd39e803e791feedfdd6a07/src/lib/qnio/nio_client.c	2021-10-05 23:25:59.547804335 +0200
+@@ -537,8 +537,8 @@ static inline int
  send_on_connection(struct qnio_msg *msg, struct conn *c)
  {
      msg->ctx = c;
@@ -10,9 +11,11 @@
 +    msg->hinfo.crc = (unsigned char)((uintptr_t) msg % CRC_MODULO);
      nioDbg("Msg is born on client side msgid=%ld %p",msg->hinfo.cookie, msg);
      if (ck_pr_load_int(&c->flags) & CONN_FLAG_DISCONNECTED) {
---- libqnio-19255696d892a6d50dd39e803e791feedfdd6a07/src/lib/qnio/nio_core.c.orig	2017-04-20 02:26:17.000000000 +0200
-+++ libqnio-19255696d892a6d50dd39e803e791feedfdd6a07/src/lib/qnio/nio_core.c	2020-05-22 09:05:07.942696626 +0200
-@@ -91,7 +91,7 @@
+         nioDbg("Connection is not usable");
+diff -urNp -x '*.orig' libqnio-19255696d892a6d50dd39e803e791feedfdd6a07.org/src/lib/qnio/nio_core.c libqnio-19255696d892a6d50dd39e803e791feedfdd6a07/src/lib/qnio/nio_core.c
+--- libqnio-19255696d892a6d50dd39e803e791feedfdd6a07.org/src/lib/qnio/nio_core.c	2017-04-20 02:26:17.000000000 +0200
++++ libqnio-19255696d892a6d50dd39e803e791feedfdd6a07/src/lib/qnio/nio_core.c	2021-10-05 23:25:59.547804335 +0200
+@@ -91,7 +91,7 @@ process_client_message(struct conn *conn
      struct iovec resp;
  
      rinfo = &conn->rinfo;
@@ -21,7 +24,7 @@
      nioDbg("Msg is recvd from wire on client side msgid=%ld", msg->hinfo.cookie);
      LIST_DEL(&msg->lnode);
      nioDbg("Msg removed from pending list msgid=%ld", msg->hinfo.cookie);
-@@ -149,13 +149,13 @@
+@@ -149,13 +149,13 @@ process_header(struct conn *conn)
          return err;
      }
      if (conn->ctx->mode == QNIO_CLIENT_MODE) {
@@ -37,7 +40,7 @@
              rinfo->buf_source = BUF_SRC_MALLOC;
          }
      } else if (conn->ctx->mode == QNIO_SERVER_MODE) {
-@@ -166,7 +166,7 @@
+@@ -166,7 +166,7 @@ process_header(struct conn *conn)
          } else {
              nioDbg("Server side message, assigning default buffer");
              aligned_size = ((hinfo->payload_size / BUF_ALIGN) + 1) * BUF_ALIGN;
@@ -46,46 +49,10 @@
              rinfo->buf_source = BUF_SRC_MALLOC;
          }
      } else {
---- libqnio-19255696d892a6d50dd39e803e791feedfdd6a07/src/test/server.c.orig	2017-04-20 02:26:17.000000000 +0200
-+++ libqnio-19255696d892a6d50dd39e803e791feedfdd6a07/src/test/server.c	2020-05-22 09:06:50.795472758 +0200
-@@ -8,6 +8,7 @@
-  * GNU GPL, version 2 or (at your option) any later version.
-  */
- 
-+#include <inttypes.h>
- #include <pthread.h>
- #include <libgen.h>
- #include "defs.h"
-@@ -64,7 +65,7 @@
-     fclose(backing_file);
- 
-     if (verbose) {
--        printf("read %ld bytes\n", n);
-+        printf("read %zd bytes\n", n);
-     }
- 
-     returnd->iov_len = size;
-@@ -117,7 +118,7 @@
-     fclose(backing_file);
- 
-     if (verbose) {
--        printf("wrote %ld bytes\n", n);
-+        printf("wrote %zd bytes\n", n);
-     }
- 
-     msg->hinfo.err = 0;
-@@ -146,7 +147,7 @@
-     int fd;
- 
-     if (verbose) {
--        printf("In server callback for msg #%ld\n", msg->hinfo.cookie);
-+        printf("In server callback for msg #%"PRIu64"\n", msg->hinfo.cookie);
-     }
- 
-     switch (opcode) {
---- libqnio-19255696d892a6d50dd39e803e791feedfdd6a07/src/lib/qnio/slab.c.orig	2017-04-20 02:26:17.000000000 +0200
-+++ libqnio-19255696d892a6d50dd39e803e791feedfdd6a07/src/lib/qnio/slab.c	2020-05-22 09:29:40.824717340 +0200
-@@ -31,7 +31,9 @@
+diff -urNp -x '*.orig' libqnio-19255696d892a6d50dd39e803e791feedfdd6a07.org/src/lib/qnio/slab.c libqnio-19255696d892a6d50dd39e803e791feedfdd6a07/src/lib/qnio/slab.c
+--- libqnio-19255696d892a6d50dd39e803e791feedfdd6a07.org/src/lib/qnio/slab.c	2017-04-20 02:26:17.000000000 +0200
++++ libqnio-19255696d892a6d50dd39e803e791feedfdd6a07/src/lib/qnio/slab.c	2021-10-05 23:25:59.547804335 +0200
+@@ -31,7 +31,9 @@ slab_init(slab_t *slab, uint32_t size, u
          if(fptr != NULL)
              entry = fptr(NULL);
          else if(alignment != 0)
@@ -96,7 +63,7 @@
          else
              entry = malloc(alloc_size);
          node = (fifo_node_t *) malloc(sizeof(fifo_node_t));
-@@ -67,7 +69,9 @@
+@@ -67,7 +69,9 @@ slab_get(slab_t *slab)
          if(slab->init_fptr != NULL)
              entry = slab->init_fptr(NULL);
          else if(slab->alignment != 0)
@@ -107,7 +74,7 @@
          else
              entry = malloc(slab->alloc_size);
          node = (fifo_node_t *) malloc(sizeof(fifo_node_t));
-@@ -101,7 +105,9 @@
+@@ -101,7 +105,9 @@ slab_get_unsafe(slab_t *slab)
      else
      {
          if(slab->alignment != 0)
@@ -118,3 +85,41 @@
          else
              entry = malloc(slab->alloc_size);
          node = (fifo_node_t *) malloc(sizeof(fifo_node_t));
+diff -urNp -x '*.orig' libqnio-19255696d892a6d50dd39e803e791feedfdd6a07.org/src/test/server.c libqnio-19255696d892a6d50dd39e803e791feedfdd6a07/src/test/server.c
+--- libqnio-19255696d892a6d50dd39e803e791feedfdd6a07.org/src/test/server.c	2017-04-20 02:26:17.000000000 +0200
++++ libqnio-19255696d892a6d50dd39e803e791feedfdd6a07/src/test/server.c	2021-10-05 23:25:59.547804335 +0200
+@@ -8,6 +8,7 @@
+  * GNU GPL, version 2 or (at your option) any later version.
+  */
+ 
++#include <inttypes.h>
+ #include <pthread.h>
+ #include <libgen.h>
+ #include "defs.h"
+@@ -64,7 +65,7 @@ static int vdisk_read(struct qnio_msg *m
+     fclose(backing_file);
+ 
+     if (verbose) {
+-        printf("read %ld bytes\n", n);
++        printf("read %zd bytes\n", n);
+     }
+ 
+     returnd->iov_len = size;
+@@ -117,7 +118,7 @@ static int vdisk_write(struct qnio_msg *
+     fclose(backing_file);
+ 
+     if (verbose) {
+-        printf("wrote %ld bytes\n", n);
++        printf("wrote %zd bytes\n", n);
+     }
+ 
+     msg->hinfo.err = 0;
+@@ -146,7 +147,7 @@ void *pdispatch(void *data)
+     int fd;
+ 
+     if (verbose) {
+-        printf("In server callback for msg #%ld\n", msg->hinfo.cookie);
++        printf("In server callback for msg #%"PRIu64"\n", msg->hinfo.cookie);
+     }
+ 
+     switch (opcode) {

@@ -4,7 +4,7 @@ Name:		libvxhs
 Version:	1.0
 %define	gitref	19255696d892a6d50dd39e803e791feedfdd6a07
 %define	snap	20170421
-%define	rel	1
+%define	rel	2
 Release:	0.%{snap}.%{rel}
 License:	GPL v2+
 Group:		Libraries
